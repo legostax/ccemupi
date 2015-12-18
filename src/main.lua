@@ -1,5 +1,6 @@
 local messageCache = {}
 
+-- TODO: Eventually switch to a dynamic config system
 local defaultConf = [[_conf = {
 	-- Enable the "http" API on Computers
 	enableAPI_http = true,
@@ -35,59 +36,51 @@ local defaultConf = [[_conf = {
 	mobileMode = false,
 	
 	--Mappings for controlpad
-	ctrlPad={
-		["top"] = "w",
-		["bottom"] = "s",
-		["left"] = "a",
-		["right"] = "d",
-		["center"] = "return"
+	ctrlPad = {
+		top = "w",
+		bottom = "s",
+		left = "a",
+		right = "d",
+		center = "return"
 	}
 }
 ]]
 
--- Load configuration
-local defaultConfFunc = loadstring(defaultConf,"@config")
-defaultConfFunc() -- Load defaults.
-
-function complain(test,err,stat)
-	if test ~= true then
-		table.insert(messageCache,err)
-		stat.bad = true
-	end
-end
+-- Load default configuration
+loadstring(defaultConf,"@config")()
 
 function validateConfig(cfgData,setup)
-	local cfgCache = {}
-	for k,v in pairs(_conf) do
-		cfgCache[k] = v
-	end
 	local cfgFunc, err = loadstring(cfgData,"@config")
 	if cfgFunc == nil then
 		table.insert(messageCache,err)
 	else
+		local tmpenv = {}
+		setfenv(cfgFunc, tmpenv)
 		stat, err = pcall(cfgFunc)
 		if stat == false then
 			table.insert(messageCache,err)
-			_conf = cfgCache
+		elseif tmpenv._conf == nil then
+			table.insert(messageCache, "No value set for config")
+		elseif type(tmpenv._conf) ~= "table" then
+			table.insert(messageCache, "Invalid value for config")
 		else
 			-- Verify configuration
-			local stat = {bad = false}
-			complain(type(_conf.enableAPI_http) == "boolean", "Invalid value for _conf.enableAPI_http", stat)
-			complain(type(_conf.enableAPI_cclite) == "boolean", "Invalid value for _conf.enableAPI_cclite", stat)
-			complain(type(_conf.terminal_height) == "number", "Invalid value for _conf.terminal_height", stat)
-			complain(type(_conf.terminal_width) == "number", "Invalid value for _conf.terminal_width", stat)
-			complain(type(_conf.terminal_guiScale) == "number", "Invalid value for _conf.terminal_guiScale", stat)
-			complain(type(_conf.cclite_showFPS) == "boolean", "Invalid value for _conf.cclite_showFPS", stat)
-			complain(type(_conf.lockfps) == "number", "Invalid value for _conf.lockfps", stat)
-			complain(type(_conf.useLuaSec) == "boolean", "Invalid value for _conf.useLuaSec", stat)
-			complain(type(_conf.useCRLF) == "boolean", "Invalid value for _conf.useCRLF", stat)
-			complain(type(_conf.cclite_updateChecker) == "boolean", "Invalid value for _conf.cclite_updateChecker", stat)
-			complain(type(_conf.mobileMode) == "boolean", "Invalid value for _conf.mobileMode", stat)
-			complain(type(_conf.ctrlPad) == "table", "Invalid value for _conf.ctrlPad", stat)
-			if stat.bad == true then
-				_conf = cfgCache
-			elseif type(setup) == "function" then
-				setup(cfgCache)
+			for k,v in pairs(_conf) do
+				if tmpenv._conf[k] == nil then
+					table.insert(messageCache, "No value set for config:"..tostring(k))
+				end
+			end
+			for k,v in pairs(tmpenv._conf) do
+				if _conf[k] == nil then
+					table.insert(messageCache, "Unknown config entry config:"..tostring(k))
+				elseif type(v) ~= type(_conf[k]) then
+					table.insert(messageCache, "Invalid value for config:"..tostring(k))
+				else
+					_conf[k] = v
+				end
+			end
+			if type(setup) == "function" then
+				setup()
 			end
 		end
 	end
@@ -109,14 +102,6 @@ bit = require("bit")
 require("render")
 require("api")
 require("vfs")
-
-if _conf.compat_loadstringMask ~= nil then
-	Screen:message("_conf.compat_loadstringMask is obsolete")
-end
-
-if _conf.compat_faultyClip ~= nil then
-	Screen:message("_conf.compat_faultyClip is obsolete")
-end
 
 -- Test if HTTPS is working
 if _conf.useLuaSec then
@@ -194,6 +179,7 @@ keys = {
 	["capslock"] = 58,
 	["numlock"] = 69,
 	["scrolllock"] = 70,
+	["pause"] = 197,
 	
 	["f1"] = 59,
 	["f2"] = 60,
@@ -350,6 +336,10 @@ function Computer:resume(...)
 	return ok, err
 end
 
+local function validCharacter(byte)
+	return byte >= 32 and byte <= 126
+end
+
 function love.load()
 	if love.system.getOS() == "Android" then
 		love.keyboard.setTextInput(true)
@@ -375,31 +365,6 @@ function love.load()
 
 	if not love.filesystem.exists("data/0/") then
 		love.filesystem.createDirectory("data/0/") -- Make the user data folder
-	end
-	
-	local cache0
-	if love.filesystem.exists("data/0/") and not love.filesystem.isDirectory("data/0/") then
-		print("Backing up /0")
-		cache0 = love.filesystem.read("/data/0")
-		love.filesystem.remove("/data/0")
-		love.filesystem.createDirectory("data/0/")
-	end
-	
-	vfs.mount("/data","/","hdd")
-	-- Migrate to new folder.
-	local list = vfs.getDirectoryItems("/")
-	for k,v in pairs(list) do
-		if tonumber(v) == nil or tonumber(v) < 0 or tonumber(v) ~= math.floor(tonumber(v)) or v ~= tostring(tonumber(v)) then
-			print("Migrating /" .. v)
-			api._copytree("/" .. v, "/0/" .. v)
-			api._deltree("/" .. v)
-		end
-	end
-	vfs.unmount("/")
-	
-	if cache0 ~= nil then
-		print("Restoring /0")
-		love.filesystem.write("/data/0/0",cache0)
 	end
 	
 	vfs.mount("/data/0","/","hdd")
@@ -433,31 +398,31 @@ function love.mousepressed(x, y, button)
 				-- Click on control pad
 				if y <= controlPad.y - (controlPad.r / 2.5) then
 					table.insert(Computer.eventQueue, {"key",keys[_conf.ctrlPad.top]})
-					if #_conf.ctrlPad.top == 1 and ChatAllowedCharacters[_conf.ctrlPad.top:byte()] then
+					if #_conf.ctrlPad.top == 1 and validCharacter(_conf.ctrlPad.top:byte()) then
 						table.insert(Computer.eventQueue, {"char", _conf.ctrlPad.top})
 					end
 				end
 				if y >= controlPad.y + (controlPad.r / 2.5) then
 					table.insert(Computer.eventQueue, {"key",keys[_conf.ctrlPad.bottom]})
-					if #_conf.ctrlPad.bottom == 1 and ChatAllowedCharacters[_conf.ctrlPad.bottom:byte()] then
+					if #_conf.ctrlPad.bottom == 1 and validCharacter(_conf.ctrlPad.bottom:byte()) then
 						table.insert(Computer.eventQueue, {"char", _conf.ctrlPad.bottom})
 					end
 				end
 				if x <= controlPad.x - (controlPad.r / 2.5) then
 					table.insert(Computer.eventQueue, {"key",keys[_conf.ctrlPad.left]})
-					if #_conf.ctrlPad.left == 1 and ChatAllowedCharacters[_conf.ctrlPad.left:byte()] then
+					if #_conf.ctrlPad.left == 1 and validCharacter(_conf.ctrlPad.left:byte()) then
 						table.insert(Computer.eventQueue, {"char", _conf.ctrlPad.left})
 					end
 				end
 				if x >= controlPad.x + (controlPad.r / 2.5) then
 					table.insert(Computer.eventQueue, {"key",keys[_conf.ctrlPad.right]})
-					if #_conf.ctrlPad.right == 1 and ChatAllowedCharacters[_conf.ctrlPad.right:byte()] then
+					if #_conf.ctrlPad.right == 1 and validCharacter(_conf.ctrlPad.right:byte()) then
 						table.insert(Computer.eventQueue, {"char", _conf.ctrlPad.right})
 					end
 				end
 				if ((x - controlPad.x)^2 + (y - controlPad.y)^2 < (controlPad.r / 2.5)^2) then
 					table.insert(Computer.eventQueue, {"key",keys[_conf.ctrlPad.center]})
-					if #_conf.ctrlPad.center == 1 and ChatAllowedCharacters[_conf.ctrlPad.center:byte()] then
+					if #_conf.ctrlPad.center == 1 and validCharacter(_conf.ctrlPad.center:byte()) then
 						table.insert(Computer.eventQueue, {"char", _conf.ctrlPad.center})
 					end
 				end
@@ -490,7 +455,7 @@ function love.textinput(unicode)
 		if love.system.getOS() == "Android" and keys[unicode] ~= nil then
 			table.insert(Computer.eventQueue, {"key", keys[unicode]})
 		end
-		if ChatAllowedCharacters[unicode:byte()] then
+		if validCharacter(unicode:byte()) then
 			table.insert(Computer.eventQueue, {"char", unicode})
 		end
 	end
@@ -515,17 +480,19 @@ function love.keypressed(key, isrepeat)
 
 	if love.keyboard.isDown("ctrl") and key == "v" then
 		local cliptext = love.system.getClipboardText()
-		cliptext = cliptext:gsub("\r\n","\n"):sub(1,128)
+		cliptext = cliptext:gsub("\r\n","\n"):sub(1,512)
 		local nloc = cliptext:find("\n") or -1
 		if nloc > 0 then
 			cliptext = cliptext:sub(1, nloc - 1)
 		end
-		table.insert(Computer.eventQueue, {"paste", cliptext})
+		if cliptext ~= "" then
+			table.insert(Computer.eventQueue, {"paste", cliptext})
+		end
 	elseif isrepeat and love.keyboard.isDown("ctrl") and (key == "t" or key == "s" or key == "r") then
 	elseif keys[key] then
 		table.insert(Computer.eventQueue, {"key", keys[key], isrepeat})
 		-- Hack to get around android bug
-		if love.system.getOS() == "Android" and #key == 1 and ChatAllowedCharacters[key:byte()] then
+		if love.system.getOS() == "Android" and #key == 1 and validCharacter(key:byte()) then
 			table.insert(Computer.eventQueue, {"char", key})
 		end
 	end
@@ -690,10 +657,10 @@ function Computer:update()
 		end
 	end
 
-	while #self.eventQueue > 0 do
-		while #self.eventQueue > 256 do
-			table.remove(self.eventQueue,257)
-		end
+	while #self.eventQueue > 256 do
+		table.remove(self.eventQueue,257)
+	end
+	for i=1, #self.eventQueue do
 		local event = self.eventQueue[1]
 		table.remove(self.eventQueue,1)
 		if self.eventFilter == nil or event[1] == self.eventFilter or event[1] == "terminate" then

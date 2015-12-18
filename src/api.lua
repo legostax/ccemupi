@@ -588,6 +588,7 @@ if _conf.enableAPI_cclite then
 end
 
 if _conf.enableAPI_http then
+	local https_alert=false
 	api.http = {}
 	function api.http.checkURL(sUrl)
 		if type(sUrl) ~= "string" then
@@ -602,7 +603,7 @@ if _conf.enableAPI_http then
 		end
 		return true
 	end
-	function api.http.request(sUrl, sParams)
+	function api.http.request(sUrl, sParams, tHeaders)
 		if type(sUrl) ~= "string" then
 			error("Expected string",2)
 		end
@@ -613,10 +614,31 @@ if _conf.enableAPI_http then
 		if goodUrl:sub(1,5) ~= "http:" and goodUrl:sub(1,6) ~= "https:" then
 			return false, "URL malformed"
 		end
+		if goodUrl:sub(1,6) == "https:" and not _conf.useLuaSec then
+			if not https_alert then
+				https_alert=true
+				Screen:message("Warning: No HTTPS support enabled, falling back to HTTP")
+			end
+			print("Warning: Attempted to load page \"" .. goodUrl .. "\" without HTTPS support enabled")
+		end
+		if type(sParams) ~= "string" then
+			sParams = nil
+		end
 		local http = HttpRequest.new()
 		local method = sParams and "POST" or "GET"
 
 		http.open(method, goodUrl, true)
+
+		if type(tHeaders) == "table" then
+			for k, v in pairs(tHeaders) do
+				if type(k) == "string" and type(v) == "string" then
+					local lk=string.lower(k)
+					if lk ~= "host" and lk ~= "connection" then
+						http.setRequestHeader(k, v)
+					end
+				end
+			end
+		end
 
 		if method == "POST" then
 			http.setRequestHeader("Content-Type", "application/x-www-form-urlencoded")
@@ -628,7 +650,7 @@ if _conf.enableAPI_http then
 				local handle = HTTPHandle(lines(http.responseText), http.status)
 				table.insert(Computer.eventQueue, {"http_success", sUrl, handle})
 			else
-				table.insert(Computer.eventQueue, {"http_failure", sUrl})
+				table.insert(Computer.eventQueue, {"http_failure", sUrl, "Could not connect"})
 			end
 		end
 
@@ -650,7 +672,7 @@ end
 function api.os.setComputerLabel(label)
 	if type(label) == "function" then label = nil end
 	if type(label) ~= "string" and type(label) ~= "nil" then error("Expected string or nil",2) end
-	Computer.state.label = label
+	Computer.state.label = label:sub(1,32)
 end
 function api.os.getComputerLabel()
 	return Computer.state.label
@@ -1178,8 +1200,12 @@ end
 
 api.bit = {}
 local function cleanValue(val)
-	if val ~= val then val = 0 end
-	return math.max(math.min(val,2^31-1),-2^31)
+	if val ~= val or val == -math.huge then
+		return 0
+	elseif val == math.huge then
+		return -1
+	end
+	return val
 end
 function api.bit.norm(val)
 	while val < 0 do val = val + 4294967296 end
@@ -1308,7 +1334,7 @@ _tostring_DB[error] = "error"
 function api.init() -- Called after this file is loaded! Important. Else api.x is not defined
 	api.math.randomseed(math.random(0,0xFFFFFFFFFFFF))
 	api.env = {
-		_CC_VERSION="1.74",
+		_CC_VERSION="1.75",
 		_LUAJ_VERSION="2.0.3",
 		_MC_VERSION="1.7.10",
 		_VERSION="Lua 5.1",
