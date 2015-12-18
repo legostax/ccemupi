@@ -1,5 +1,6 @@
 local messageCache = {}
 
+-- TODO: Eventually switch to a dynamic config system
 local defaultConf = [[_conf = {
 	-- Enable the "http" API on Computers
 	enableAPI_http = true,
@@ -34,8 +35,7 @@ local defaultConf = [[_conf = {
 ]]
 
 -- Load configuration
-local defaultConfFunc = loadstring(defaultConf,"@config")
-defaultConfFunc() -- Load defaults.
+loadstring(defaultConf,"@config")()
 
 function complain(test,err,stat)
 	if test ~= true then
@@ -45,35 +45,39 @@ function complain(test,err,stat)
 end
 
 function validateConfig(cfgData,setup)
-	local cfgCache = {}
-	for k,v in pairs(_conf) do
-		cfgCache[k] = v
-	end
 	local cfgFunc, err = loadstring(cfgData,"@config")
 	if cfgFunc == nil then
 		table.insert(messageCache,err)
 	else
+		local tmpenv = {}
+		setfenv(cfgFunc, tmpenv)
 		stat, err = pcall(cfgFunc)
 		if stat == false then
 			table.insert(messageCache,err)
-			_conf = cfgCache
+		elseif tmpenv._conf == nil then
+			table.insert(messageCache, "No value set for config")
+		elseif type(tmpenv._conf) ~= "table" then
+			table.insert(messageCache, "Invalid value for config")
 		else
 			-- Verify configuration
-			local stat = {bad = false}
-			complain(type(_conf.enableAPI_http) == "boolean", "Invalid value for _conf.enableAPI_http", stat)
-			complain(type(_conf.enableAPI_cclite) == "boolean", "Invalid value for _conf.enableAPI_cclite", stat)
-			complain(type(_conf.terminal_height) == "number", "Invalid value for _conf.terminal_height", stat)
-			complain(type(_conf.terminal_width) == "number", "Invalid value for _conf.terminal_width", stat)
-			complain(type(_conf.terminal_guiScale) == "number", "Invalid value for _conf.terminal_guiScale", stat)
-			complain(type(_conf.cclite_showFPS) == "boolean", "Invalid value for _conf.cclite_showFPS", stat)
-			complain(type(_conf.lockfps) == "number", "Invalid value for _conf.lockfps", stat)
-			complain(type(_conf.useLuaSec) == "boolean", "Invalid value for _conf.useLuaSec", stat)
-			complain(type(_conf.useCRLF) == "boolean", "Invalid value for _conf.useCRLF", stat)
-			complain(type(_conf.cclite_updateChecker) == "boolean", "Invalid value for _conf.cclite_updateChecker", stat)
-			if stat.bad == true then
-				_conf = cfgCache
-			elseif type(setup) == "function" then
-				setup(cfgCache)
+			for k,v in pairs(_conf) do
+				if tmpenv._conf[k] == nil then
+					table.insert(messageCache, "No value set for config:"..tostring(k))
+				end
+			end
+			for k,v in pairs(tmpenv._conf) do
+				if _conf[k] == nil then
+					if k ~= "ctrlPad" and k ~= "mobileMode" then
+						table.insert(messageCache, "Unknown config entry config:"..tostring(k))
+					end
+				elseif type(v) ~= type(_conf[k]) then
+					table.insert(messageCache, "Invalid value for config:"..tostring(k))
+				else
+					_conf[k] = v
+				end
+			end
+			if type(setup) == "function" then
+				setup()
 			end
 		end
 	end
@@ -94,14 +98,6 @@ require("emu")
 require("render")
 require("api")
 require("vfs")
-
-if _conf.compat_loadstringMask ~= nil then
-	Screen:message("_conf.compat_loadstringMask is obsolete")
-end
-
-if _conf.compat_faultyClip ~= nil then
-	Screen:message("_conf.compat_faultyClip is obsolete")
-end
 
 -- Test if HTTPS is working
 function _testLuaSec()
@@ -183,6 +179,7 @@ keys = {
 	["capslock"] = 58,
 	["numlock"] = 69,
 	["scrolllock"] = 70,
+	["pause"] = 197,
 
 	["f1"] = 59,
 	["f2"] = 60,
@@ -237,16 +234,6 @@ end
 
 local smallfont = love.graphics.newFont(10)
 
-function openLocation(place)
-  if love._os == 'OS X' then
-    os.execute('open "' .. place .. '"')
-  elseif love._os == 'Windows' then -- Tested on Windows 7
-    os.execute('start ' .. place)
-  elseif love._os == 'Linux' then
-    os.execute('xdg-open "' .. place .. '"')
-  end
-end
-
 function ui_createAutoResizingFrame(width, height)
 	local frame = loveframes.Create("frame")
 	frame.width = width * _conf.terminal_guiScale + 2
@@ -284,35 +271,14 @@ local function ui_editConfig()
 		if v.type == "closebutton" then
 			function v.OnClick()
 				local cfgData = editor.input_box:GetText()
-				validateConfig(cfgData, function(cfgCache)
+				validateConfig(cfgData, function()
 					-- Config was good, modify things as needed.
 					love.filesystem.write("/CCLite.cfg", cfgData)
 					Screen.pixelWidth = _conf.terminal_guiScale * 6
 					Screen.pixelHeight = _conf.terminal_guiScale * 9
-					for i = 32,126 do Screen.tOffset[string.char(i)] = math.floor(3 - Screen.font:getWidth(string.char(i)) / 2) * _conf.terminal_guiScale end
-					Screen.tOffset["@"] = 0
-					Screen.tOffset["~"] = 0
-					for k,v in pairs(Emulator.computers) do
-						v.frame:SetSize(Screen:sWidth(v) + 2, Screen:sHeight(v) + 26)
-						if cfgCache.terminal_height < _conf.terminal_height then
-							for y = 1,cfgCache.terminal_height do
-								for x = cfgCache.terminal_width + 1,_conf.terminal_width do
-									v.textB[y][x] = " "
-									v.backgroundColourB[y][x] = 32768
-									v.textColourB[y][x] = 1
-								end
-							end
-							for y = cfgCache.terminal_height + 1, _conf.terminal_height do
-								v.textB[y] = {}
-								v.backgroundColourB[y] = {}
-								v.textColourB[y] = {}
-								for x = 1,_conf.terminal_width do
-									v.textB[y][x] = " "
-									v.backgroundColourB[y][x] = 32768
-									v.textColourB[y][x] = 1
-								end
-							end
-						end
+					for i = 32,126 do Screen.tOffset[string.char(i)] = math.ceil(3 - Screen.font:getWidth(string.char(i)) / 2) * _conf.terminal_guiScale end
+					for _, Computer in pairs(Emulator.computers) do
+						Computer.frame:SetSize(Screen:sWidth(Computer) + 2, Screen:sHeight(Computer) + 26)
 					end
 					Screen:message("Loaded new config")
 					_testLuaSec()
@@ -574,6 +540,10 @@ function love.mousepressed(x, y, button)
 	end
 end
 
+local function validCharacter(byte)
+	return byte >= 32 and byte <= 126
+end
+
 function love.textinput(unicode)
 	loveframes.textinput(unicode)
 	local Computer = getActiveComputer()
@@ -583,7 +553,7 @@ function love.textinput(unicode)
 		if love.system.getOS() == "Android" and keys[unicode] ~= nil then
 			table.insert(Computer.eventQueue, {"key", keys[unicode]})
 		end
-		if ChatAllowedCharacters[unicode:byte()] then
+		if validCharacter(unicode:byte()) then
 			table.insert(Computer.eventQueue, {"char", unicode})
 		end
 	end
@@ -611,17 +581,19 @@ function love.keypressed(key, isrepeat)
 
 	if love.keyboard.isDown("ctrl") and key == "v" then
 		local cliptext = love.system.getClipboardText()
-		cliptext = cliptext:gsub("\r\n","\n"):sub(1,128)
+		cliptext = cliptext:gsub("\r\n","\n"):sub(1,512)
 		local nloc = cliptext:find("\n") or -1
 		if nloc > 0 then
 			cliptext = cliptext:sub(1, nloc - 1)
 		end
-		table.insert(Computer.eventQueue, {"paste", cliptext})
+		if cliptext ~= "" then
+			table.insert(Computer.eventQueue, {"paste", cliptext})
+		end
 	elseif isrepeat and love.keyboard.isDown("ctrl") and (key == "t" or key == "s" or key == "r") then
 	elseif keys[key] then
 		table.insert(Computer.eventQueue, {"key", keys[key], isrepeat})
 		-- Hack to get around android bug
-		if love.system.getOS() == "Android" and #key == 1 and ChatAllowedCharacters[key:byte()] then
+		if love.system.getOS() == "Android" and #key == 1 and validCharacter(key:byte()) then
 			table.insert(Computer.eventQueue, {"char", key})
 		end
 	end

@@ -158,12 +158,17 @@ local function validateColor(color,def)
 end
 
 local function cleanValue(val)
-	if val ~= val then val = 0 end
-	return math.max(math.min(val,2^31-1),-2^31)
+	if val ~= val or val == -math.huge then
+		return 0
+	elseif val == math.huge then
+		return -1
+	end
+	return val
 end
 
 local ffi=require("ffi")
 api = {}
+local https_alert=false
 function api.init(Computer,color,id)
 	local vfs = Computer.vfs
 	local function FileReadHandle(path)
@@ -502,7 +507,7 @@ function api.init(Computer,color,id)
 			error("Colour out of range",2)
 		end
 		num = 2^math.floor(math.log(num)/math.log(2))
-		if num ~= 1 and num ~= 32768 and not color then
+		if num ~= 2^0 and num ~= 2^7 and num ~= 2^8 and num ~= 2^15 and not color then
 			error("Colour not supported",2)
 		end
 		Computer.state.fg = num
@@ -518,7 +523,7 @@ function api.init(Computer,color,id)
 			error("Colour out of range",2)
 		end
 		num = 2^math.floor(math.log(num)/math.log(2))
-		if num ~= 1 and num ~= 32768 and not color then
+		if num ~= 2^0 and num ~= 2^7 and num ~= 2^8 and num ~= 2^15 and not color then
 			error("Colour not supported",2)
 		end
 		Computer.state.bg = num
@@ -654,7 +659,7 @@ function api.init(Computer,color,id)
 			end
 			return true
 		end
-		function api.http.request(sUrl, sParams)
+		function api.http.request(sUrl, sParams, tHeaders)
 			if type(sUrl) ~= "string" then
 				error("Expected string",2)
 			end
@@ -665,10 +670,31 @@ function api.init(Computer,color,id)
 			if goodUrl:sub(1,5) ~= "http:" and goodUrl:sub(1,6) ~= "https:" then
 				return false, "URL malformed"
 			end
+			if goodUrl:sub(1,6) == "https:" and not _conf.useLuaSec then
+				if not https_alert then
+					https_alert=true
+					Screen:message("Warning: No HTTPS support enabled, falling back to HTTP")
+				end
+				print("Warning: Attempted to load page \"" .. goodUrl .. "\" without HTTPS support enabled")
+			end
+			if type(sParams) ~= "string" then
+				sParams = nil
+			end
 			local http = HttpRequest.new()
 			local method = sParams and "POST" or "GET"
 
 			http.open(method, goodUrl, true)
+
+			if type(tHeaders) == "table" then
+				for k, v in pairs(tHeaders) do
+					if type(k) == "string" and type(v) == "string" then
+						local lk=string.lower(k)
+						if lk ~= "host" and lk ~= "connection" then
+							http.setRequestHeader(k, v)
+						end
+					end
+				end
+			end
 
 			if method == "POST" then
 				http.setRequestHeader("Content-Type", "application/x-www-form-urlencoded")
@@ -680,7 +706,7 @@ function api.init(Computer,color,id)
 					local handle = HTTPHandle(lines(http.responseText), http.status)
 					table.insert(Computer.eventQueue, {"http_success", sUrl, handle})
 				else
-					table.insert(Computer.eventQueue, {"http_failure", sUrl})
+					table.insert(Computer.eventQueue, {"http_failure", sUrl, "Could not connect"})
 				end
 			end
 
@@ -705,7 +731,8 @@ function api.init(Computer,color,id)
 	function api.os.setComputerLabel(label)
 		if type(label) == "function" then label = nil end
 		if type(label) ~= "string" and type(label) ~= "nil" then error("Expected string or nil",2) end
-		Computer.state.label = label
+		Computer.state.label = label:sub(1,32)
+		Computer.frame:SetName((label:sub(1,32) or "<Not Labeled>") .. " - " .. Computer.frame.basename)
 	end
 	function api.os.getComputerLabel()
 		return Computer.state.label
@@ -1323,7 +1350,7 @@ function api.init(Computer,color,id)
 
 	api.math.randomseed(math.random(0,0xFFFFFFFFFFFF))
 	api.env = {
-		_CC_VERSION="1.74",
+		_CC_VERSION="1.75",
 		_LUAJ_VERSION="2.0.3",
 		_MC_VERSION="1.7.10",
 		_VERSION="Lua 5.1",

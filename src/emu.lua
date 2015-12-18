@@ -42,13 +42,13 @@ function emu.newComputer(color,id, type)
 		dead = false,
 		type = type,
 
-		term_height = 19,
-		term_width = 51,
+		term_width = _conf.terminal_width,
+		term_height = _conf.terminal_height,
 	}
 
 	if type == "pocket" then
-		Computer.term_height = 20
 		Computer.term_width = 26
+		Computer.term_height = 20
 	end
 
 	for y = 1, Computer.term_height do
@@ -211,10 +211,10 @@ function emu.newComputer(color,id, type)
 			end
 		end
 
-		while #self.eventQueue > 0 do
-			while #self.eventQueue > 256 do
-				table.remove(self.eventQueue,257)
-			end
+		while #self.eventQueue > 256 do
+			table.remove(self.eventQueue,257)
+		end
+		for i=1, #self.eventQueue do
 			local event = self.eventQueue[1]
 			table.remove(self.eventQueue,1)
 			if self.eventFilter == nil or event[1] == self.eventFilter or event[1] == "terminate" then
@@ -236,7 +236,8 @@ function emu.newComputer(color,id, type)
 
 	Computer.frame = loveframes.Create("frame")
 	Computer.frame.emu = Computer
-	Computer.frame:SetName((color and "Advanced" or "Normal") .. " Computer")
+	Computer.frame.basename = (color and "Advanced" or "Normal") .. " Computer #" .. id
+	Computer.frame:SetName((Computer.state.label or "<Not Labeled>") .. " - " .. Computer.frame.basename)
 	Computer.frame:SetSize(Screen:sWidth(Computer)  + 2, Screen:sHeight(Computer)  + 26)
 	Computer.frame:CenterWithinArea(0, 0, love.window.getDimensions())
 	if Computer.frame.y < -22 then

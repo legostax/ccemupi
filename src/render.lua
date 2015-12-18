@@ -82,12 +82,12 @@ end
 
 local messages = {}
 
-function Screen:sWidth(Emulator)
-	return (Emulator.term_width * 6 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2)
+function Screen:sWidth(Computer)
+	return (Computer.term_width * 6 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2)
 end
 
-function Screen:sHeight(Emulator)
-	return (Emulator.term_height * 9 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2)
+function Screen:sHeight(Computer)
+	return (Computer.term_height * 9 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2)
 end
 
 function Screen:message(message)
@@ -112,32 +112,43 @@ local hidden = {
 	["\n"]=true,
 	[" "]=true,
 }
-function Screen:draw(Emulator)
-	local decWidth = Emulator.term_width - 1
-	local decHeight = Emulator.term_height - 1
+function Screen:draw(Computer)
+	local decWidth = Computer.term_width - 1
+	local decHeight = Computer.term_height - 1
 	-- Setup font
 	love.graphics.setFont(self.font)
 	-- Render terminal
-	if not Emulator.running then
+	if not Computer.running then
 		setColor(COLOUR_FULL_BLACK,true)
-		ldrawRect("fill", 0, 0, self:sWidth(Emulator), self:sHeight(Emulator))
+		ldrawRect("fill", 0, 0, self:sWidth(Computer), self:sHeight(Computer))
 	else
 		-- Render background color
-		setColor(COLOUR_CODE[Emulator.backgroundColourB[1][1]],true)
+		setColor(COLOUR_CODE[Computer.backgroundColourB[1][1]],true)
 		for y = 0, decHeight do
+			local length, last, lastx = 0
+			local ypos = y * self.pixelHeight + (y == 0 and 0 or _conf.terminal_guiScale)
+			local ylength = self.pixelHeight + ((y == 0 or y == decHeight) and _conf.terminal_guiScale or 0)
 			for x = 0, decWidth do
-
-				setColor(COLOUR_CODE[Emulator.backgroundColourB[y + 1][x + 1]]) -- TODO COLOUR_CODE lookup might be too slow?
-				ldrawRect("fill", x * self.pixelWidth + (x == 0 and 0 or _conf.terminal_guiScale), y * self.pixelHeight + (y == 0 and 0 or _conf.terminal_guiScale), self.pixelWidth + ((x == 0 or x == decWidth) and _conf.terminal_guiScale or 0), self.pixelHeight + ((y == 0 or y == decHeight) and _conf.terminal_guiScale or 0))
-
+				if Computer.backgroundColourB[y + 1][x + 1] ~= last then
+					if last then
+						ldrawRect("fill", lastx * self.pixelWidth + (lastx == 0 and 0 or _conf.terminal_guiScale), ypos, self.pixelWidth * length + (lastx == 0 and _conf.terminal_guiScale or 0), ylength)
+					end
+					last = Computer.backgroundColourB[y + 1][x + 1]
+					lastx = x
+					length = 1
+					setColor(COLOUR_CODE[last]) -- TODO COLOUR_CODE lookup might be too slow?
+				else
+					length = length + 1
+				end
 			end
+			ldrawRect("fill", lastx * self.pixelWidth + (lastx == 0 and 0 or _conf.terminal_guiScale), ypos, self.pixelWidth * length + _conf.terminal_guiScale * (lastx == 0 and 2 or 1), ylength)
 		end
 
 		-- Render text
 		love.graphics.translate(_conf.terminal_guiScale, _conf.terminal_guiScale)
 		for y = 0, decHeight do
-			local self_textB = Emulator.textB[y + 1]
-			local self_textColourB = Emulator.textColourB[y + 1]
+			local self_textB = Computer.textB[y + 1]
+			local self_textColourB = Computer.textColourB[y + 1]
 			for x = 0, decWidth do
 				local text = self_textB[x + 1]
 				if not hidden[text] then
@@ -152,14 +163,14 @@ function Screen:draw(Emulator)
 		end
 
 		-- Render cursor
-		if Emulator.state.blink and self.showCursor and Emulator.state.cursorX >= 1 and Emulator.state.cursorX <= Emulator.term_width and Emulator.state.cursorY >= 1 and Emulator.state.cursorY <= Emulator.term_height then
-			setColor(COLOUR_CODE[Emulator.state.fg])
-			lprint("_", (Emulator.state.cursorX - 1) * self.pixelWidth + tOffset["_"], (Emulator.state.cursorY - 1) * self.pixelHeight, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
+		if Computer.state.blink and self.showCursor and Computer.state.cursorX >= 1 and Computer.state.cursorX <= Computer.term_width and Computer.state.cursorY >= 1 and Computer.state.cursorY <= Computer.term_height then
+			setColor(COLOUR_CODE[Computer.state.fg])
+			lprint("_", (Computer.state.cursorX - 1) * self.pixelWidth + tOffset["_"], (Computer.state.cursorY - 1) * self.pixelHeight, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
 		end
 		love.graphics.translate(-_conf.terminal_guiScale, -_conf.terminal_guiScale)
 	end
 
 	if _conf.cclite_showFPS then
-		self:drawMessage("FPS: " .. Emulator.FPS, self:sWidth(Emulator) - (49 * _conf.terminal_guiScale), _conf.terminal_guiScale * 2)
+		self:drawMessage("FPS: " .. Computer.FPS, self:sWidth(Computer) - (49 * _conf.terminal_guiScale), _conf.terminal_guiScale * 2)
 	end
 end
