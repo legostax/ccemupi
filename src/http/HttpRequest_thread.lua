@@ -1,4 +1,5 @@
-local ltn12  = require("ltn12")
+local ltn12 = require("ltn12")
+local url = require("socket.url")
 local httpRequest = require("socket.http")
 local httpResponseBody = {}
 local httpResponseText = ""
@@ -44,11 +45,14 @@ function sendRequest()
 		}
 	}
 
-	if (result[2] == 302 or result[2] == 301) and httpParams.redirects < 19 and httpParams.url ~= result[3].location then -- Infinite loop detection
-		httpParams.url = result[3]["location"]
-		httpParams.redirects = httpParams.redirects + 1
-		sendRequest()
-		return
+	if (result[2] == 302 or result[2] == 301) and httpParams.redirects < 19 then
+		result[3]["location"] = url.absolute(httpParams.url, result[3]["location"])
+		if httpParams.url ~= result[3].location then -- Infinite loop detection
+			httpParams.url = result[3]["location"]
+			httpParams.redirects = httpParams.redirects + 1
+			sendRequest()
+			return
+		end
 	end
 
 	-- Compile responseText
