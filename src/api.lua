@@ -514,7 +514,7 @@ function api.init(Computer,color,id)
 		Screen.dirty = true
 	end
 	function api.term.getBackgroundColor()
-		return Computer.state.fg
+		return Computer.state.bg
 	end
 	function api.term.setBackgroundColor(...)
 		local num = ...
@@ -901,7 +901,7 @@ function api.init(Computer,color,id)
 		end
 
 		path = cleanPath(path)
-		if path == ".." or path:sub(1,3) == "../" then error("Invalid Path",2) end
+		if path == ".." or path:sub(1,3) == "../" then return false end
 
 		return vfs.exists(path)
 	end
@@ -912,7 +912,7 @@ function api.init(Computer,color,id)
 		end
 
 		path = cleanPath(path)
-		if path == ".." or path:sub(1,3) == "../" then error("Invalid Path",2) end
+		if path == ".." or path:sub(1,3) == "../" then return false end
 
 		return vfs.isDirectory(path)
 	end
@@ -1056,7 +1056,7 @@ function api.init(Computer,color,id)
 
 		if fromPath == "rom" or fromPath:sub(1, 4) == "rom/" or
 			toPath == "rom" or toPath:sub(1, 4) == "rom/" then
-			error("Access Denied",2)
+			error("Access denied",2)
 		end
 		if not vfs.exists(fromPath) then
 			error("No such file",2)
@@ -1081,7 +1081,7 @@ function api.init(Computer,color,id)
 		if toPath == ".." or toPath:sub(1,3) == "../" then error("Invalid Path",2) end
 
 		if toPath == "rom" or toPath:sub(1, 4) == "rom/" then
-			error("Access Denied",2)
+			error("Access denied",2)
 		elseif not vfs.exists(fromPath) then
 			error("No such file",2)
 		elseif vfs.exists(toPath) then
@@ -1102,7 +1102,6 @@ function api.init(Computer,color,id)
 		if path == ".." or path:sub(1,3) == "../" then error("Invalid Path",2) end
 
 		if path == "rom" or path:sub(1, 4) == "rom/" or vfs.isMountPath(path) then
-
 			error("Access Denied",2)
 		end
 		deltree(path)
