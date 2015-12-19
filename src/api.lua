@@ -672,7 +672,7 @@ end
 function api.os.setComputerLabel(label)
 	if type(label) == "function" then label = nil end
 	if type(label) ~= "string" and type(label) ~= "nil" then error("Expected string or nil",2) end
-	Computer.state.label = label:sub(1,32)
+	Computer.state.label = label and label:sub(1,32)
 end
 function api.os.getComputerLabel()
 	return Computer.state.label
@@ -1334,9 +1334,8 @@ _tostring_DB[error] = "error"
 function api.init() -- Called after this file is loaded! Important. Else api.x is not defined
 	api.math.randomseed(math.random(0,0xFFFFFFFFFFFF))
 	api.env = {
-		_CC_VERSION="1.75",
+		_HOST="1.76pr6 (Minecraft 1.8)",
 		_LUAJ_VERSION="2.0.3",
-		_MC_VERSION="1.7.10",
 		_VERSION="Lua 5.1",
 		__inext = api.inext,
 		tostring = api.tostring,
