@@ -115,13 +115,23 @@ local function string_trim(s)
 	return from > #s and "" or s:match(".*%S", from)
 end
 
+local utf8=require("utf8")
+local function cleanUTF8(str)
+	-- TODO: Not accurate, but gets the job done.
+	while true do
+		local ok, bad = utf8.len(str)
+		if ok then break end
+		str = string.sub(str, 1, bad-1) .. "?" .. string.sub(str, bad+1)
+	end
+	return (str:gsub("[\xC4-\xF4][\x80-\xBF]*", "?"):gsub("[\xC2-\xC3][\x80-\xBF]*", function(a) return string.char(utf8.codepoint(a)) end))
+end
 local function FileReadHandle(path)
 	if not vfs.exists(path) then
 		return nil
 	end
 	local contents = {}
 	for line in vfs.lines(path) do
-		table.insert(contents, line)
+		table.insert(contents, cleanUTF8(line))
 	end
 	local closed = false
 	local lineIndex = 1
@@ -175,6 +185,16 @@ local function FileBinaryReadHandle(path)
 	return handle
 end
 
+local function convUTF8(data)
+	return (data:gsub("[\128-\255]", function(a)
+		local byte=a:byte()
+		if byte >= 128 and byte < 192 then
+			return "\xC2"..a
+		else
+			return string.char(0xC3, byte-64)
+		end
+	end))
+end
 local function FileWriteHandle(path, append)
 	local closed = false
 	if path:find("/",nil,true) then
@@ -189,11 +209,11 @@ local function FileWriteHandle(path, append)
 		end,
 		writeLine = function(data)
 			if closed then error("Stream closed",2) end
-			File:write(serialize(data) .. (_conf.useCRLF and "\r\n" or "\n"))
+			File:write(convUTF8(serialize(data)) .. (_conf.useCRLF and "\r\n" or "\n"))
 		end,
 		write = function(data)
 			if closed then error("Stream closed",2) end
-			File:write(serialize(data))
+			File:write(convUTF8(serialize(data)))
 		end,
 		flush = function()
 			File:flush()
