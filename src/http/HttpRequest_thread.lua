@@ -1,3 +1,5 @@
+require("love.filesystem")
+require("http.HttpPatch")
 local ltn12 = require("ltn12")
 local url = require("socket.url")
 local httpRequest = require("socket.http")

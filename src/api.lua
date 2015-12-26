@@ -368,17 +368,7 @@ function api.loadstring(str, source)
 	setfenv(f, api.env)
 	return f, err
 end
-function api.inext(tbl, key)
-	if type(tbl) ~= "table" then
-		error("bad argument: table expected, got " .. type(tbl),2)
-	elseif type(key) ~= "number" then
-		error("bad argument: int expected, got " .. type(key),2)
-	end
-	key = math.floor(key)+1
-	if key == key and tbl[key] ~= nil then
-		return key, tbl[key]
-	end
-end
+api.inext = (ipairs({})) -- Grab inext from ipairs
 
 api.term = {}
 local function validateColor(color,def)
@@ -653,6 +643,7 @@ if _conf.enableAPI_http then
 		if method == "POST" then
 			http.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
 			http.setRequestHeader("Content-Encoding", "UTF-8");
+			http.setRequestHeader("Content-Length", sPostbody:len())
 		end		
 		if type(tHeaders) == "table" then
 			for k, v in pairs(tHeaders) do
@@ -663,9 +654,6 @@ if _conf.enableAPI_http then
 					end
 				end
 			end
-		end
-		if method == "POST" then
-			http.setRequestHeader("Content-Length", sPostbody:len())
 		end
 
 		http.onReadyStateChange = function()
@@ -1344,7 +1332,7 @@ function api.math.random(a,b)
 end
 
 _tostring_DB[coroutine.create] = nil
-_tostring_DB[string.gmatch] = "gmatch" -- what ...
+_tostring_DB[string.gmatch] = "gmatch"
 _tostring_DB[api.tostring] = "tostring"
 _tostring_DB[api.tonumber] = "tonumber"
 _tostring_DB[api.loadstring] = "loadstring"
@@ -1357,7 +1345,7 @@ _tostring_DB[error] = "error"
 function api.init() -- Called after this file is loaded! Important. Else api.x is not defined
 	api.math.randomseed(math.random(0,0xFFFFFFFFFFFF))
 	api.env = {
-		_HOST="1.76pr6 (Minecraft 1.8)",
+		_HOST="1.76 (Minecraft 1.8)",
 		_LUAJ_VERSION="2.0.3",
 		_VERSION="Lua 5.1",
 		__inext = api.inext,
