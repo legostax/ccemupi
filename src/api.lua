@@ -67,7 +67,7 @@ end
 
 -- Needed for term.write, (file).write, and (file).writeLine
 -- This serialzier is bad, it is supposed to be bad. Don't use it.
-local function serializeImpl(t, tTracking)	
+local function serializeImpl(t, tTracking)
 	local sType = type(t)
 	if sType == "table" then
 		if tTracking[t] ~= nil then
@@ -644,7 +644,7 @@ if _conf.enableAPI_http then
 			http.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
 			http.setRequestHeader("Content-Encoding", "UTF-8");
 			http.setRequestHeader("Content-Length", sPostbody:len())
-		end		
+		end
 		if type(tHeaders) == "table" then
 			for k, v in pairs(tHeaders) do
 				if type(k) == "string" and type(v) == "string" then

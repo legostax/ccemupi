@@ -2,10 +2,6 @@ HttpRequest = {}
 HttpRequest.threads = {}
 HttpRequest.activeRequests = {}
 
-local function newThread()
-
-end
-
 function HttpRequest.new()
 	local self = {}
 
@@ -41,7 +37,7 @@ function HttpRequest.new()
 	---------------------------------------------------------------------
 	self.send = function(pString)
 		httpParams.body = pString or ""
-		
+
 		self.threadObj.channel:supply(TSerial.pack(httpParams))
 		self.threadObj.status = 2
 	end
@@ -73,7 +69,7 @@ function HttpRequest.new()
 
 			-- Mark thread as avaliable again
 			self.threadObj.status = 0
-			
+
 			-- Finally call onReadyStateChange callback
 			self.onReadyStateChange()
 		end
@@ -88,7 +84,7 @@ function HttpRequest.new()
 					break
 				end
 			end
-			
+
 			-- Remove dead thread from avaliable threads
 			for i = 1, #HttpRequest.threads do
 				if HttpRequest.threads[i] == self.threadObj then
@@ -96,7 +92,7 @@ function HttpRequest.new()
 					break
 				end
 			end
-			
+
 			-- Finally call onReadyStateChange callback
 			self.onReadyStateChange()
 		end

@@ -12,7 +12,7 @@ function waitForInstructions(channel,supportHTTPS)
 	cChannel = channel
 	assert(type(supportHTTPS) == "boolean", "HTTPS support flag invalid.")
 	httpsSupport = supportHTTPS
-	
+
 	while true do
 		httpParamsMsg = cChannel:demand()
 		assert(type(httpParamsMsg) == "string", "HTTP parameters invalid.")
