@@ -180,7 +180,7 @@ keys = {
 	["numlock"] = 69,
 	["scrolllock"] = 70,
 	["pause"] = 197,
-	
+
 	["f1"] = 59,
 	["f2"] = 60,
 	["f3"] = 61,
@@ -337,14 +337,14 @@ function Computer:resume(...)
 end
 
 local function validCharacter(byte)
-	return byte >= 32 and byte <= 126
+	return (byte >= 32 and byte <= 126) or (byte >= 160 and byte <= 255)
 end
 
 function love.load()
 	if love.system.getOS() == "Android" then
 		love.keyboard.setTextInput(true)
 	end
-	if _conf.lockfps > 0 then 
+	if _conf.lockfps > 0 then
 		min_dt = 1/_conf.lockfps
 		next_time = love.timer.getTime()
 	end
@@ -366,10 +366,10 @@ function love.load()
 	if not love.filesystem.exists("data/0/") then
 		love.filesystem.createDirectory("data/0/") -- Make the user data folder
 	end
-	
+
 	vfs.mount("/data/0","/","hdd")
 	vfs.mount("/lua/rom","/rom","rom")
-	
+
 	love.keyboard.setKeyRepeat(true)
 
 	Computer:start()
@@ -580,7 +580,7 @@ function Computer:update()
 			self.actions.alarms[k] = nil
 		end
 	end
-	
+
 	local sclose={}
 	for k,v in pairs(self.actions.sockets) do
 		if v.server then
@@ -624,7 +624,7 @@ function Computer:update()
 	for k,v in pairs(sclose) do
 		self.actions.sockets[k]=nil
 	end
-	
+
 	-- Messages
 	for i = 1,#messageCache do
 		Screen:message(messageCache[i])
@@ -632,14 +632,14 @@ function Computer:update()
 	if #messageCache > 0 then
 		messageCache = {}
 	end
-		
+
 	for i = 1, 10 do
 		if now - Screen.messages[i][2] > 4 and Screen.messages[i][3] == true then
 			Screen.messages[i][3] = false
 			Screen.dirty = true
 		end
 	end
-	
+
 	-- Mouse
 	if self.mouse.isPressed then
 		local mouseX = love.mouse.getX()
@@ -726,7 +726,7 @@ function love.run()
 			Screen:draw()
 		end
 
-		if _conf.lockfps > 0 then 
+		if _conf.lockfps > 0 then
 			local cur_time = love.timer.getTime()
 			if next_time < cur_time then
 				next_time = cur_time

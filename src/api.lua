@@ -67,7 +67,7 @@ end
 
 -- Needed for term.write, (file).write, and (file).writeLine
 -- This serialzier is bad, it is supposed to be bad. Don't use it.
-local function serializeImpl(t, tTracking)	
+local function serializeImpl(t, tTracking)
 	local sType = type(t)
 	if sType == "table" then
 		if tTracking[t] ~= nil then
@@ -115,13 +115,23 @@ local function string_trim(s)
 	return from > #s and "" or s:match(".*%S", from)
 end
 
+local utf8=require("utf8")
+local function cleanUTF8(str)
+	-- TODO: Not accurate, but gets the job done.
+	while true do
+		local ok, bad = utf8.len(str)
+		if ok then break end
+		str = string.sub(str, 1, bad-1) .. "?" .. string.sub(str, bad+1)
+	end
+	return (str:gsub("[\xC4-\xF4][\x80-\xBF]*", "?"):gsub("[\xC2-\xC3][\x80-\xBF]*", function(a) return string.char(utf8.codepoint(a)) end))
+end
 local function FileReadHandle(path)
 	if not vfs.exists(path) then
 		return nil
 	end
 	local contents = {}
 	for line in vfs.lines(path) do
-		table.insert(contents, line)
+		table.insert(contents, cleanUTF8(line))
 	end
 	local closed = false
 	local lineIndex = 1
@@ -175,6 +185,16 @@ local function FileBinaryReadHandle(path)
 	return handle
 end
 
+local function convUTF8(data)
+	return (data:gsub("[\128-\255]", function(a)
+		local byte=a:byte()
+		if byte >= 128 and byte < 192 then
+			return "\xC2"..a
+		else
+			return string.char(0xC3, byte-64)
+		end
+	end))
+end
 local function FileWriteHandle(path, append)
 	local closed = false
 	if path:find("/",nil,true) then
@@ -189,11 +209,11 @@ local function FileWriteHandle(path, append)
 		end,
 		writeLine = function(data)
 			if closed then error("Stream closed",2) end
-			File:write(serialize(data) .. (_conf.useCRLF and "\r\n" or "\n"))
+			File:write(convUTF8(serialize(data)) .. (_conf.useCRLF and "\r\n" or "\n"))
 		end,
 		write = function(data)
 			if closed then error("Stream closed",2) end
-			File:write(serialize(data))
+			File:write(convUTF8(serialize(data)))
 		end,
 		flush = function()
 			File:flush()
@@ -348,17 +368,7 @@ function api.loadstring(str, source)
 	setfenv(f, api.env)
 	return f, err
 end
-function api.inext(tbl, key)
-	if type(tbl) ~= "table" then
-		error("bad argument: table expected, got " .. type(tbl),2)
-	elseif type(key) ~= "number" then
-		error("bad argument: int expected, got " .. type(key),2)
-	end
-	key = math.floor(key)+1
-	if key == key and tbl[key] ~= nil then
-		return key, tbl[key]
-	end
-end
+api.inext = (ipairs({})) -- Grab inext from ipairs
 
 api.term = {}
 local function validateColor(color,def)
@@ -603,7 +613,7 @@ if _conf.enableAPI_http then
 		end
 		return true
 	end
-	function api.http.request(sUrl, sParams, tHeaders)
+	function api.http.request(sUrl, sPostbody, tHeaders)
 		if type(sUrl) ~= "string" then
 			error("Expected string",2)
 		end
@@ -621,28 +631,29 @@ if _conf.enableAPI_http then
 			end
 			print("Warning: Attempted to load page \"" .. goodUrl .. "\" without HTTPS support enabled")
 		end
-		if type(sParams) ~= "string" then
-			sParams = nil
+		if type(sPostbody) ~= "string" then
+			sPostbody = nil
 		end
 		local http = HttpRequest.new()
-		local method = sParams and "POST" or "GET"
+		local method = sPostbody and "POST" or "GET"
 
 		http.open(method, goodUrl, true)
 
+		http.setRequestHeader("Accept-Charset", "UTF-8");
+		if method == "POST" then
+			http.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
+			http.setRequestHeader("Content-Encoding", "UTF-8");
+			http.setRequestHeader("Content-Length", sPostbody:len())
+		end
 		if type(tHeaders) == "table" then
 			for k, v in pairs(tHeaders) do
 				if type(k) == "string" and type(v) == "string" then
 					local lk=string.lower(k)
-					if lk ~= "host" and lk ~= "connection" then
+					if lk ~= "host" and lk ~= "connection" and lk ~= "content-length" then
 						http.setRequestHeader(k, v)
 					end
 				end
 			end
-		end
-
-		if method == "POST" then
-			http.setRequestHeader("Content-Type", "application/x-www-form-urlencoded")
-			http.setRequestHeader("Content-Length", sParams:len())
 		end
 
 		http.onReadyStateChange = function()
@@ -654,7 +665,7 @@ if _conf.enableAPI_http then
 			end
 		end
 
-		http.send(sParams)
+		http.send(sPostbody)
 		return true
 	end
 end
@@ -672,7 +683,7 @@ end
 function api.os.setComputerLabel(label)
 	if type(label) == "function" then label = nil end
 	if type(label) ~= "string" and type(label) ~= "nil" then error("Expected string or nil",2) end
-	Computer.state.label = label:sub(1,32)
+	Computer.state.label = label and label:sub(1,32)
 end
 function api.os.getComputerLabel()
 	return Computer.state.label
@@ -754,12 +765,12 @@ end
 api.fs = {}
 
 local function cleanPath(path,wildcard)
-	local path = path:gsub("\\", "/"):gsub("[\":<>%?|" .. (wildcard and "" or "%*") .. "]","")
+	local path = path:gsub("\\", "/"):gsub("[%z\1-\31\":<>%?|" .. (wildcard and "" or "%*") .. "]","")
 
 	local tPath = {}
 	for part in path:gmatch("[^/]+") do
 		if part ~= "" and part ~= "." then
-			if part == ".." and #tPath > 0 and tPath[#tPath] ~= ".." then
+			if (part == ".." or part == "...") and #tPath > 0 and tPath[#tPath] ~= ".." then
 				table.remove(tPath)
 			else
 				table.insert(tPath, part:sub(1,255))
@@ -1321,7 +1332,7 @@ function api.math.random(a,b)
 end
 
 _tostring_DB[coroutine.create] = nil
-_tostring_DB[string.gmatch] = "gmatch" -- what ...
+_tostring_DB[string.gmatch] = "gmatch"
 _tostring_DB[api.tostring] = "tostring"
 _tostring_DB[api.tonumber] = "tonumber"
 _tostring_DB[api.loadstring] = "loadstring"
@@ -1334,9 +1345,8 @@ _tostring_DB[error] = "error"
 function api.init() -- Called after this file is loaded! Important. Else api.x is not defined
 	api.math.randomseed(math.random(0,0xFFFFFFFFFFFF))
 	api.env = {
-		_CC_VERSION="1.75",
+		_HOST="1.76 (Minecraft 1.8)",
 		_LUAJ_VERSION="2.0.3",
-		_MC_VERSION="1.7.10",
 		_VERSION="Lua 5.1",
 		__inext = api.inext,
 		tostring = api.tostring,

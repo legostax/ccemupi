@@ -7,7 +7,7 @@ local httpsSupport, httpsRequest, cChannel
 
 function waitForInstructions(channel)
 	cChannel = channel
-	
+
 	httpParams = {
 		method = "GET",
 		url = "http://gamax92.pc-logix.com/builddate.txt",

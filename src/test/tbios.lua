@@ -37,7 +37,7 @@ function egt(tab,ext)
 						file.write(type(args[i]))
 					else
 						file.write(tostring(args[i]))
-					end 
+					end
 					if i < 3 then
 						file.write(",")
 					end
@@ -52,7 +52,7 @@ function egt(tab,ext)
 						file.write(type(ret[i]))
 					else
 						file.write(tostring(ret[i]))
-					end 
+					end
 					if i < #ret then
 						file.write(",")
 					end
