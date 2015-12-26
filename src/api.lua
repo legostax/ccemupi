@@ -623,7 +623,7 @@ if _conf.enableAPI_http then
 		end
 		return true
 	end
-	function api.http.request(sUrl, sParams, tHeaders)
+	function api.http.request(sUrl, sPostbody, tHeaders)
 		if type(sUrl) ~= "string" then
 			error("Expected string",2)
 		end
@@ -641,28 +641,31 @@ if _conf.enableAPI_http then
 			end
 			print("Warning: Attempted to load page \"" .. goodUrl .. "\" without HTTPS support enabled")
 		end
-		if type(sParams) ~= "string" then
-			sParams = nil
+		if type(sPostbody) ~= "string" then
+			sPostbody = nil
 		end
 		local http = HttpRequest.new()
-		local method = sParams and "POST" or "GET"
+		local method = sPostbody and "POST" or "GET"
 
 		http.open(method, goodUrl, true)
 
+		http.setRequestHeader("Accept-Charset", "UTF-8");
+		if method == "POST" then
+			http.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
+			http.setRequestHeader("Content-Encoding", "UTF-8");
+		end		
 		if type(tHeaders) == "table" then
 			for k, v in pairs(tHeaders) do
 				if type(k) == "string" and type(v) == "string" then
 					local lk=string.lower(k)
-					if lk ~= "host" and lk ~= "connection" then
+					if lk ~= "host" and lk ~= "connection" and lk ~= "content-length" then
 						http.setRequestHeader(k, v)
 					end
 				end
 			end
 		end
-
 		if method == "POST" then
-			http.setRequestHeader("Content-Type", "application/x-www-form-urlencoded")
-			http.setRequestHeader("Content-Length", sParams:len())
+			http.setRequestHeader("Content-Length", sPostbody:len())
 		end
 
 		http.onReadyStateChange = function()
@@ -674,7 +677,7 @@ if _conf.enableAPI_http then
 			end
 		end
 
-		http.send(sParams)
+		http.send(sPostbody)
 		return true
 	end
 end
@@ -774,12 +777,12 @@ end
 api.fs = {}
 
 local function cleanPath(path,wildcard)
-	local path = path:gsub("\\", "/"):gsub("[\":<>%?|" .. (wildcard and "" or "%*") .. "]","")
+	local path = path:gsub("\\", "/"):gsub("[%z\1-\31\":<>%?|" .. (wildcard and "" or "%*") .. "]","")
 
 	local tPath = {}
 	for part in path:gmatch("[^/]+") do
 		if part ~= "" and part ~= "." then
-			if part == ".." and #tPath > 0 and tPath[#tPath] ~= ".." then
+			if (part == ".." or part == "...") and #tPath > 0 and tPath[#tPath] ~= ".." then
 				table.remove(tPath)
 			else
 				table.insert(tPath, part:sub(1,255))

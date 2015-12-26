@@ -47,7 +47,7 @@ function HttpRequest.new()
 	end
 	---------------------------------------------------------------------
 	self.setRequestHeader = function(pName, pValue)
-		httpParams.headers[pName] = pValue
+		httpParams.headers[pName:lower()] = pValue
 	end
 	---------------------------------------------------------------------
 	self.checkRequest = function()

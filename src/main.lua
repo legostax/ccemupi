@@ -337,7 +337,7 @@ function Computer:resume(...)
 end
 
 local function validCharacter(byte)
-	return byte >= 32 and byte <= 126
+	return (byte >= 32 and byte <= 126) or (byte >= 160 and byte <= 255)
 end
 
 function love.load()
