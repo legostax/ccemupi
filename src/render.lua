@@ -48,14 +48,39 @@ Screen = {
 	setup = false,
 }
 
+local map={}
 local glyphs = ""
-for i = 32,126 do
-	glyphs = glyphs .. string.char(i)
+for i = 0,127 do
+	local c=string.char(i)
+	if i~=0 and i~=9 and i~=10 and i~=13 then
+		map[c]=c
+		glyphs=glyphs..map[c]
+	else
+		map[c]=" "
+	end
 end
-Screen.font = love.graphics.newImageFont("res/minecraft.png",glyphs)
+for i = 128,191 do
+	local c=string.char(i)
+	if i~=128 and i~=160 then
+		map[c]=string.char(0xC2,i)
+		glyphs=glyphs..map[c]
+	else
+		map[c]=" "
+	end
+end
+for i = 192,255 do
+	local c=string.char(i)
+	map[c]=string.char(0xC3,i-64)
+	glyphs=glyphs..map[c]
+end
+
+Screen.font = love.graphics.newImageFont("res/font.png",glyphs)
 love.graphics.setFont(Screen.font)
 
-for i = 32,126 do Screen.tOffset[string.char(i)] = math.ceil(3 - Screen.font:getWidth(string.char(i)) / 2) * _conf.terminal_guiScale end
+for i = 0,255 do Screen.tOffset[map[string.char(i)]] = math.ceil(3 - Screen.font:getWidth(map[string.char(i)]) / 2) * _conf.terminal_guiScale end
+for k, v in pairs({[170]=0,[176]=0,[178]=0,[179]=0,[180]=0,[185]=0,[236]=1}) do
+	Screen.tOffset[map[string.char(k)]] = v * _conf.terminal_guiScale
+end
 
 local msgTime = love.timer.getTime() + 5
 for i = 1,10 do
@@ -105,13 +130,6 @@ function Screen:drawMessage(message,x,y)
 	lprint(message, x, y, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
 end
 
-local hidden = {
-	["\0"]=true,
-	["\9"]=true,
-	["\r"]=true,
-	["\n"]=true,
-	[" "]=true,
-}
 function Screen:draw(Computer)
 	local decWidth = Computer.term_width - 1
 	local decHeight = Computer.term_height - 1
@@ -150,12 +168,8 @@ function Screen:draw(Computer)
 			local self_textB = Computer.textB[y + 1]
 			local self_textColourB = Computer.textColourB[y + 1]
 			for x = 0, decWidth do
-				local text = self_textB[x + 1]
-				if not hidden[text] then
-					local sByte = string.byte(text)
-					if sByte < 32 or sByte > 126 then
-						text = "?"
-					end
+				local text = map[self_textB[x + 1]]
+				if not text ~= " " then
 					setColor(COLOUR_CODE[self_textColourB[x + 1]])
 					lprint(text, x * self.pixelWidth + tOffset[text], y * self.pixelHeight, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
 				end
