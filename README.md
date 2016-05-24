@@ -6,11 +6,12 @@ Description:
 
 This is a ComputerCraft Emulator written in Love2D. It is not complete, and is still a work in progress.
 
-*This version only comes packaged with a special Raspbian image file that has yet to be released.*
+**This version only comes packaged with a special Raspbian image file that has yet to be released.**
 
 HTTPS Support:
 ----------------
 I may remove this in order to keep the system nerfed like normal computers in CC.
+
 **Linux:**
 
 ```
@@ -44,11 +45,6 @@ Then go into conf.lua and set useLuaSec to true
 **Mac:**
 
 I dunno. Try the ssl.so file on the binaries page.
-
-Screenshots:
-------------
-
-![Demonstration](http://i.imgur.com/VSCl7IN.png)
 
 NOTES:
 ------
