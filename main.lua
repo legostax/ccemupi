@@ -4,37 +4,37 @@ local messageCache = {}
 local defaultConf = [[_conf = {
 	-- Enable the "http" API on Computers
 	enableAPI_http = true,
-	
+
 	-- Enable the "cclite" API on Computers
 	enableAPI_cclite = true,
-	
+
 	-- The height of Computer screens, in characters
 	terminal_height = 19,
-	
+
 	-- The width of Computer screens, in characters
 	terminal_width = 51,
-	
+
 	-- The GUI scale of Computer screens
 	terminal_guiScale = 2,
-	
+
 	-- Enable display of emulator FPS
 	cclite_showFPS = false,
-	
+
 	-- The FPS to lock CCLite to
 	lockfps = 20,
-	
+
 	-- Enable https connections through luasec
 	useLuaSec = false,
-	
+
 	-- Enable usage of Carrage Return for fs.writeLine
 	useCRLF = false,
-	
+
 	-- Check for updates
 	cclite_updateChecker = true,
-	
+
 	-- Enable onscreen controls
 	mobileMode = false,
-	
+
 	--Mappings for controlpad
 	ctrlPad = {
 		top = "w",
@@ -124,14 +124,14 @@ if _conf.useLuaSec then
 end
 
 -- Check for updates
-local _updateCheck
+--[[local _updateCheck
 if love.filesystem.exists("builddate.txt") and _conf.cclite_updateChecker then
 	_updateCheck = {}
 	_updateCheck.thread = love.thread.newThread("updateCheck.lua")
 	_updateCheck.channel = love.thread.newChannel()
 	_updateCheck.thread:start(_updateCheck.channel)
 	_updateCheck.working = true
-end
+end]]
 
 -- Load virtual peripherals
 peripheral = {}
