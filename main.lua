@@ -387,7 +387,7 @@ function love.load()
 	love.keyboard.setKeyRepeat(true)
 
 	love.mouse.setGrabbed(true)
-	--love.mouse.setVisible(false)
+	love.mouse.setVisible(false)
 
 	--[[canvas = love.graphics.newCanvas()
 	local str = love.filesystem.read('res/CRT.frag')
