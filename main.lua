@@ -389,11 +389,11 @@ function love.load()
 	love.mouse.setGrabbed(true)
 	--love.mouse.setVisible(false)
 
-	canvas = love.graphics.newCanvas()
+	--[[canvas = love.graphics.newCanvas()
 	local str = love.filesystem.read('res/CRT.frag')
 	shader = love.graphics.newShader(str)
 	shader:send("inputSize", {love.graphics.getWidth(),love.graphics.getHeight()})
-	shader:send("textureSize", {love.graphics.getWidth(),love.graphics.getHeight()})
+	shader:send("textureSize", {love.graphics.getWidth(),love.graphics.getHeight()})]]
 
 	Computer:start()
 end
