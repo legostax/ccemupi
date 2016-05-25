@@ -105,7 +105,7 @@ startx = math.floor((love.graphics.getWidth() - (_conf.terminal_width * (_conf.t
 starty = math.floor((love.graphics.getHeight() - (_conf.terminal_height * (_conf.terminal_guiScale * 9))) / 2)-2
 
 if _conf.enableAPI_http then require("http.HttpRequest") end
-bit = require("bit")
+--bit = require("bit")
 require("render")
 require("api")
 require("vfs")
