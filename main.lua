@@ -6,7 +6,7 @@ local defaultConf = [[_conf = {
 	enableAPI_http = true,
 
 	-- Enable the "cclite" API on Computers
-	enableAPI_cclite = true,
+	enableAPI_cclite = false,
 
 	-- The height of Computer screens, in characters
 	terminal_height = 19,
@@ -24,13 +24,13 @@ local defaultConf = [[_conf = {
 	lockfps = 20,
 
 	-- Enable https connections through luasec
-	useLuaSec = false,
+	--useLuaSec = false,
 
-	-- Enable usage of Carrage Return for fs.writeLine
+	-- Enable usage of Carriage Return for fs.writeLine
 	useCRLF = false,
 
 	-- Check for updates
-	cclite_updateChecker = true,
+	cclite_updateChecker = false,
 
 	-- Enable onscreen controls
 	mobileMode = false,
@@ -85,7 +85,7 @@ function validateConfig(cfgData,setup)
 		end
 	end
 end
-
+if love.filesystem.exists("/CCLite.cfg") then love.filesystem.remove("/CCLite.cfg") end
 if love.filesystem.exists("/CCLite.cfg") then
 	local cfgData = love.filesystem.read("/CCLite.cfg")
 	validateConfig(cfgData)
@@ -93,9 +93,16 @@ else
 	love.filesystem.write("/CCLite.cfg", defaultConf)
 end
 
-love.window.setTitle("ComputerCraft Emulator")
+love.window.setFullscreen(true, "desktop")
+love.window.setTitle("CC Emulator for Raspberry Pi 3")
 love.window.setIcon(love.image.newImageData("res/icon.png"))
-love.window.setMode((_conf.terminal_width * 6 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2), (_conf.terminal_height * 9 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2), {vsync = false})
+-- w = (_conf.terminal_width * 6 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2)
+-- h = (_conf.terminal_height * 9 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2)
+love.window.setMode(love.graphics.getWidth(), love.graphics.getHeight(), {fullscreen = true, fullscreentype = "desktop", vsync = false})
+_conf.terminal_width = math.floor(love.graphics.getWidth()/(_conf.terminal_guiScale * 6))-1
+_conf.terminal_height = math.floor(love.graphics.getHeight()/(_conf.terminal_guiScale * 9))-1
+startx = math.floor((love.graphics.getWidth() - (_conf.terminal_width * (_conf.terminal_guiScale * 6))) / 2)-2
+starty = math.floor((love.graphics.getHeight() - (_conf.terminal_height * (_conf.terminal_guiScale * 9))) / 2)-2
 
 if _conf.enableAPI_http then require("http.HttpRequest") end
 bit = require("bit")
@@ -104,7 +111,7 @@ require("api")
 require("vfs")
 
 -- Test if HTTPS is working
-if _conf.useLuaSec then
+--[[if _conf.useLuaSec then
 	local stat, err = pcall(function()
 		local trash = require("ssl.https")
 	end)
@@ -121,7 +128,7 @@ if _conf.useLuaSec then
 			print(err)
 		end
 	end
-end
+end]]
 
 -- Check for updates
 --[[local _updateCheck
@@ -134,7 +141,7 @@ if love.filesystem.exists("builddate.txt") and _conf.cclite_updateChecker then
 end]]
 
 -- Load virtual peripherals
-peripheral = {}
+--[[peripheral = {}
 peripheral.base = {}
 peripheral.types = {}
 local tFiles = love.filesystem.getDirectoryItems("peripheral")
@@ -144,7 +151,7 @@ for k,v in pairs(tFiles) do
 		Screen:message("Could not load peripheral." .. v:sub(1,-5))
 		print(err)
 	end
-end
+end]]
 
 -- Conversion table for Love2D keys to LWJGL key codes
 keys = {
@@ -207,12 +214,16 @@ keys = {
 	["lalt"] = 56,
 }
 
--- Patch love.keyboard.isDown to make ctrl checking easier
+-- Patch love.keyboard.isDown to make ctrl, shift, and alt checking easier
 local olkiD = love.keyboard.isDown
 function love.keyboard.isDown(...)
 	local keys = {...}
 	if #keys == 1 and keys[1] == "ctrl" then
 		return olkiD("lctrl") or olkiD("rctrl")
+	elseif #keys == 1 and keys[1] == "shift" then
+		return olkiD("lshift") or olkiD("rshift")
+	elseif #keys == 1 and keys[1] == "alt" then
+		return olkiD("lalt") or olkiD("ralt")
 	else
 		return olkiD(unpack(keys))
 	end
@@ -258,6 +269,7 @@ Computer = {
 
 function Computer:start()
 	self.reboot = false
+	self.blockInput = false
 	for y = 1, _conf.terminal_height do
 		local screen_textB = Screen.textB[y]
 		local screen_backgroundColourB = Screen.backgroundColourB[y]
@@ -305,8 +317,10 @@ function Computer:stop(reboot)
 	self.proc = nil
 	self.running = false
 	self.reboot = reboot
+	self.blockInput = true
 	Screen.dirty = true
-
+	-- clear screen to be black (0,0,0)
+	love.graphics.clear(0,0,0)
 	-- Reset events/key shortcuts
 	self.actions.terminate = nil
 	self.actions.shutdown = nil
@@ -341,9 +355,9 @@ local function validCharacter(byte)
 end
 
 function love.load()
-	if love.system.getOS() == "Android" then
+	--[[if love.system.getOS() == "Android" then
 		love.keyboard.setTextInput(true)
-	end
+	end]]
 	if _conf.lockfps > 0 then
 		min_dt = 1/_conf.lockfps
 		next_time = love.timer.getTime()
@@ -371,6 +385,15 @@ function love.load()
 	vfs.mount("/lua/rom","/rom","rom")
 
 	love.keyboard.setKeyRepeat(true)
+
+	love.mouse.setGrabbed(true)
+	--love.mouse.setVisible(false)
+
+	canvas = love.graphics.newCanvas()
+	local str = love.filesystem.read('res/CRT.frag')
+	shader = love.graphics.newShader(str)
+	shader:send("inputSize", {love.graphics.getWidth(),love.graphics.getHeight()})
+	shader:send("textureSize", {love.graphics.getWidth(),love.graphics.getHeight()})
 
 	Computer:start()
 end
@@ -461,7 +484,8 @@ function love.textinput(unicode)
 	end
 end
 
-function love.keypressed(key, isrepeat)
+function love.keypressed(key, scancode, isrepeat)
+	--print("love.keypressed("..key..", "..tostring(isrepeat)..")")
 	if love.keyboard.isDown("ctrl") and not isrepeat then
 		if Computer.actions.terminate == nil    and key == "t" then
 			Computer.actions.terminate = love.timer.getTime()
@@ -471,11 +495,16 @@ function love.keypressed(key, isrepeat)
 			Computer.actions.reboot =    love.timer.getTime()
 		end
 	else -- Ignore key shortcuts before "press any key" action. TODO: This might be slightly buggy!
-		if not Computer.running and not isrepeat then
+		--[[if not Computer.running and not isrepeat then
 			Computer:start()
 			Computer.blockInput = true
+			print("Computer.blockInput = true")
 			return
-		end
+		end]]
+	end
+
+	if not Computer.running and not Computer.reboot and not Computer.blockInput then
+		Computer:start()
 	end
 
 	if love.keyboard.isDown("ctrl") and key == "v" then
@@ -499,8 +528,14 @@ function love.keypressed(key, isrepeat)
 end
 
 function love.keyreleased(key)
-	if keys[key] then
-		table.insert(Computer.eventQueue, {"key_up", keys[key]})
+	if not Computer.running and not Computer.reboot then
+		if #keys == 0 then
+			Computer.blockInput = false
+		end
+	else
+		if keys[key] then
+			table.insert(Computer.eventQueue, {"key_up", keys[key]})
+		end
 	end
 end
 
@@ -519,15 +554,21 @@ love.focus = love.visible
 ]]
 
 local function updateShortcut(name, key1, key2, cb)
+	--print("updateShortcut("..name..", "..key1..", "..key2..", "..tostring(cb))
 	if Computer.actions[name] ~= nil then
+		--print("Computer.actions["..name.."] ~= nil")
 		if love.keyboard.isDown(key1) and love.keyboard.isDown(key2) then
 			if love.timer.getTime() - Computer.actions[name] > 1 then
 				Computer.actions[name] = nil
 				if cb then cb() end
 			end
+			--print("Triggered shortcut "..name)
 		else
 			Computer.actions[name] = nil
+			--print("Set Computer.actions["..name.."] = nil")
 		end
+	else
+		--print("Computer.actions["..name.."] == nil")
 	end
 end
 
@@ -678,6 +719,15 @@ function love.run()
 
 	-- Main loop time.
 	while true do
+		if love.keyboard.isDown("ctrl") and love.keyboard.isDown("alt") and love.keyboard.isDown("shift") then -- global keyboard shortcuts to interact with Pi
+	        if love.keyboard.isDown("r") then
+	            -- write to file to alert handler to run "sudo reboot"
+	            love.event.push("quit")
+	        elseif love.keyboard.isDown("s") then
+	            -- write to file to alert handler to run "sudo poweroff"
+	            love.event.push("quit")
+	        end
+	    end
 		-- Process events.
 		if love.event then
 			love.event.pump()
@@ -737,6 +787,10 @@ function love.run()
 
 		if love.timer then love.timer.sleep(0.001) end
 		if Screen.dirty then
+			--[[love.graphics.setCanvas()
+			love.graphics.setShader(shader)
+			love.graphics.draw(canvas)
+			love.graphics.setShader()]]
 			love.graphics.present()
 			Screen.dirty = false
 		end
