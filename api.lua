@@ -485,7 +485,7 @@ function api.term.setBackgroundColor(...)
 	Computer.state.bg = num
 end
 function api.term.isColor()
-	return true
+	return false
 end
 function api.term.setCursorBlink(...)
 	local bool = ...
@@ -675,10 +675,12 @@ function api.os.clock()
 	return tonumber(string.format("%0.2f",math.floor(love.timer.getTime()*20)/20 - Computer.state.startTime))
 end
 function api.os.time()
-	return math.floor(((love.timer.getTime()-Computer.state.startTime)*0.02)%24*1000)/1000
+	local now = os.date("*t")
+	local dayseconds = now.sec+(now.min*60)+(now.hour*3600)
+	return math.floor((dayseconds*24000)/86400)/1000
 end
 function api.os.day()
-	return math.floor((love.timer.getTime()-Computer.state.startTime)/1200)
+	return os.date('*t').yday
 end
 function api.os.setComputerLabel(label)
 	if type(label) == "function" then label = nil end

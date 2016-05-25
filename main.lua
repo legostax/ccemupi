@@ -387,9 +387,7 @@ function love.load()
 	love.keyboard.setKeyRepeat(true)
 
 	love.mouse.setGrabbed(true)
-	print("Mouse is grabbed")
 	love.mouse.setVisible(false)
-	print("Mouse is not visible")
 
 	--[[canvas = love.graphics.newCanvas()
 	local str = love.filesystem.read('res/CRT.frag')
