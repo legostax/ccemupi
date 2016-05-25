@@ -149,8 +149,11 @@ end
 function Screen:draw()
 	-- Render terminal
 	if not Computer.running then
-		setColor(COLOUR_FULL_BLACK)
-		ldrawRect("fill", 0, 0, self.sWidth, self.sHeight)
+		love.graphics.clear(0,0,0)
+		if not Computer.reboot then
+			love.graphics.setColor(255,255,255)
+			love.graphics.print("Press any key to reboot . . .",10,10,0,_conf.terminal_guiScale+1)
+		end
 	else
 		-- Render background color
 		setColor(COLOUR_CODE[self.backgroundColourB[1][1]])
@@ -161,7 +164,7 @@ function Screen:draw()
 			for x = 0, decWidth do
 				if self.backgroundColourB[y + 1][x + 1] ~= last then
 					if last then
-						ldrawRect("fill", lastx * self.pixelWidth + (lastx == 0 and 0 or _conf.terminal_guiScale), ypos, self.pixelWidth * length + (lastx == 0 and _conf.terminal_guiScale or 0), ylength)
+						ldrawRect("fill", (lastx * self.pixelWidth + (lastx == 0 and 0 or _conf.terminal_guiScale))+startx, ypos+starty, self.pixelWidth * length + (lastx == 0 and _conf.terminal_guiScale or 0), ylength)
 					end
 					last = self.backgroundColourB[y + 1][x + 1]
 					lastx = x
@@ -171,7 +174,7 @@ function Screen:draw()
 					length = length + 1
 				end
 			end
-			ldrawRect("fill", lastx * self.pixelWidth + (lastx == 0 and 0 or _conf.terminal_guiScale), ypos, self.pixelWidth * length + _conf.terminal_guiScale * (lastx == 0 and 2 or 1), ylength)
+			ldrawRect("fill", (lastx * self.pixelWidth + (lastx == 0 and 0 or _conf.terminal_guiScale))+startx, ypos+starty, self.pixelWidth * length + _conf.terminal_guiScale * (lastx == 0 and 2 or 1), ylength)
 		end
 
 		-- Render text
@@ -182,7 +185,7 @@ function Screen:draw()
 				local text = map[self_textB[x + 1]]
 				if not text ~= " " then
 					setColor(COLOUR_CODE[self_textColourB[x + 1]])
-					lprint(text, x * self.pixelWidth + tOffset[text] + _conf.terminal_guiScale, y * self.pixelHeight + _conf.terminal_guiScale, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
+					lprint(text, (x * self.pixelWidth + tOffset[text] + _conf.terminal_guiScale)+startx, (y * self.pixelHeight + _conf.terminal_guiScale)+starty, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
 				end
 			end
 		end
@@ -190,7 +193,7 @@ function Screen:draw()
 		-- Render cursor
 		if Computer.state.blink and self.showCursor then
 			setColor(COLOUR_CODE[Computer.state.fg])
-			lprint("_", (Computer.state.cursorX - 1) * self.pixelWidth + tOffset["_"] + _conf.terminal_guiScale, (Computer.state.cursorY - 1) * self.pixelHeight + _conf.terminal_guiScale, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
+			lprint("_", ((Computer.state.cursorX - 1) * self.pixelWidth + tOffset["_"] + _conf.terminal_guiScale)+startx, ((Computer.state.cursorY - 1) * self.pixelHeight + _conf.terminal_guiScale)+starty, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
 		end
 	end
 
