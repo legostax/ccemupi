@@ -204,9 +204,11 @@ if fs.exists( "/rom/autorun" ) and fs.isDir( "/rom/autorun" ) then
 end
 
 -- Run the user created startup, either from disk drives or the root
-local sUserStartup = shell.resolveProgram( "/startup" )
-local bEnableDiskStartup = (commands == nil)
-if bEnableDiskStartup then
+local sUserStartup = nil
+if settings.get("shell.allow_startup") then
+	sUserStartup = shell.resolveProgram("/startup")
+end
+if settings.get("shell.allow_disk_startup") then
     for n,sName in pairs( peripheral.getNames() ) do
         if disk.isPresent( sName ) and disk.hasData( sName ) then
             local sDiskStartup = shell.resolveProgram( "/" .. disk.getMountPath( sName ) .. "/startup" )

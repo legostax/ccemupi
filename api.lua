@@ -481,6 +481,10 @@ function api.term.setBackgroundColor(...)
 	if num < 1 or num >= 65536 or num ~= num then
 		error("Colour out of range",2)
 	end
+	print("bgcolor: "..num)
+	if num ~= 1 and num ~= 128 and num ~= 256 and num ~= 32768 then
+		error("Colour not supported",2)
+	end
 	num = 2^math.floor(math.log(num)/math.log(2))
 	Computer.state.bg = num
 end
