@@ -38,7 +38,11 @@ function HttpRequest.new()
 	self.send = function(pString)
 		httpParams.body = pString or ""
 
-		self.threadObj.channel:supply(TSerial.pack(httpParams))
+		--print("About to run TSerial.pack")
+		local t = TSerial.pack(httpParams)
+		--print("TSerial.pack returned: "..tostring(t))
+		self.threadObj.channel:supply(t)
+		--print("self.threadObj.channel:supply()")
 		self.threadObj.status = 2
 	end
 	---------------------------------------------------------------------

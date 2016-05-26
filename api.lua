@@ -481,7 +481,7 @@ function api.term.setBackgroundColor(...)
 	if num < 1 or num >= 65536 or num ~= num then
 		error("Colour out of range",2)
 	end
-	print("bgcolor: "..num)
+	--print("bgcolor: "..num)
 	if num ~= 1 and num ~= 128 and num ~= 256 and num ~= 32768 then
 		error("Colour not supported",2)
 	end
@@ -618,7 +618,7 @@ if _conf.enableAPI_http then
 		return true
 	end
 	function api.http.request(sUrl, sPostbody, tHeaders)
-		if type(sUrl) ~= "string" then
+		if type(sUrl) ~= "string" then -- begin error checking of URL
 			error("Expected string",2)
 		end
 		local goodUrl = string_trim(sUrl)
@@ -634,22 +634,28 @@ if _conf.enableAPI_http then
 				Screen:message("Warning: No HTTPS support enabled, falling back to HTTP")
 			end
 			print("Warning: Attempted to load page \"" .. goodUrl .. "\" without HTTPS support enabled")
-		end
-		if type(sPostbody) ~= "string" then
+		end -- end error checking of URL
+		if type(sPostbody) ~= "string" then -- error checking of postbody
 			sPostbody = nil
 		end
-		local http = HttpRequest.new()
-		local method = sPostbody and "POST" or "GET"
-
+		local http = HttpRequest.new() -- call over to HttpRequest.lua
+		local method = sPostbody and "POST" or "GET" -- if postbody ~= nil then method = "POST" otherwise method = "GET"
+		--print("Got HttpRequest.new()")
 		http.open(method, goodUrl, true)
-
+		--print("http.open("..method..", "..goodUrl..", true)")
 		http.setRequestHeader("Accept-Charset", "UTF-8");
+		--print("http.setRequestHeader(\"Accept-Charset\", \"UTF-8\")")
 		if method == "POST" then
 			http.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
+			--print("setRequestHeader Content-Type")
 			http.setRequestHeader("Content-Encoding", "UTF-8");
+			--print("setRequestHeader Content-Encoding")
 			http.setRequestHeader("Content-Length", sPostbody:len())
+			--print("setRequestHeader Content-Length")
 		end
+
 		if type(tHeaders) == "table" then
+			--print("type(tHeaders) == \"table\"")
 			for k, v in pairs(tHeaders) do
 				if type(k) == "string" and type(v) == "string" then
 					local lk=string.lower(k)
@@ -658,18 +664,26 @@ if _conf.enableAPI_http then
 					end
 				end
 			end
+		else
+			--print("type(tHeaders) ~= \"table\"")
 		end
 
 		http.onReadyStateChange = function()
+			--print("called http.onReadyStateChange")
 			if http.status == 200 then
+				print("http.status == 200")
 				local handle = HTTPHandle(lines(http.responseText), http.status)
+				--print("HTTPHandle = "..handle)
 				table.insert(Computer.eventQueue, {"http_success", sUrl, handle})
+				--print("queued event http_success")
 			else
 				table.insert(Computer.eventQueue, {"http_failure", sUrl, "Could not connect"})
+				--print("queued event http_failure")
 			end
 		end
-
+		--print("about to http.send()")
 		http.send(sPostbody)
+		--print("true")
 		return true
 	end
 end

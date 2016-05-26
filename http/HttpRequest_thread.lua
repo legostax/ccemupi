@@ -9,10 +9,12 @@ local httpParams = {}
 local httpsSupport, httpsRequest, cChannel
 
 function waitForInstructions(channel,supportHTTPS)
+	--print("Entered waitForInstructions()")
 	cChannel = channel
-	assert(type(supportHTTPS) == "boolean", "HTTPS support flag invalid.")
+	--assert(type(supportHTTPS) == "boolean", "HTTPS support flag invalid.") -- commenting this line appears to fix an app hang
+	--print("waitForInstructions: past assert()")
 	httpsSupport = supportHTTPS
-
+	--print("waitForInstructions() entering while loop")
 	while true do
 		httpParamsMsg = cChannel:demand()
 		assert(type(httpParamsMsg) == "string", "HTTP parameters invalid.")
@@ -20,6 +22,7 @@ function waitForInstructions(channel,supportHTTPS)
 
 		httpParams.redirects = 0
 		httpResponseText = ""
+		--print("about to sendRequest()")
 		sendRequest()
 	end
 end
@@ -27,6 +30,7 @@ end
 -- ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 function sendRequest()
+	--print("Entered sendRequest()")
 	httpResponseBody = {}
 	httpRequest.TIMEOUT = 21
 
@@ -77,10 +81,13 @@ end
 -- Usage: table = TSerial.unpack( TSerial.pack(table) )
 TSerial = {}
 function TSerial.pack(t)
+	--print("Entered TSerial.pack()")
 	assert(type(t) == "table", "Can only TSerial.pack tables.")
+	--print("asserted before for k,v")
 	local s = "{"
 	for k, v in pairs(t) do
 		local tk, tv = type(k), type(v)
+		--print(tk..", "..tv)
 		if tk == "boolean" then k = k and "[true]" or "[false]"
 		elseif tk == "string" then if string.find(k, "[%c%p%s]") then k = '["'..k..'"]' end
 		elseif tk == "number" then k = "["..k.."]"
@@ -99,6 +106,7 @@ function TSerial.pack(t)
 end
 
 function TSerial.unpack(s)
+	--print("Entered TSerial.unpack()")
 	assert(type(s) == "string", "TSerial.unpack: string expected, got " .. type(s))
 	return assert(loadstring("return "..s))()
 end
