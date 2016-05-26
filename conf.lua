@@ -1,6 +1,6 @@
 function love.conf(t)
 	t.identity = "ccemupi"
-	t.console = true -- Enable this to see why you get emulator messages.
+	t.console = false -- Enable this to see why you get emulator messages.
 	t.window = false
 	t.modules.audio = false
 	t.modules.joystick = false
