@@ -85,7 +85,6 @@ function validateConfig(cfgData,setup)
 		end
 	end
 end
-if love.filesystem.exists("/CCLite.cfg") then love.filesystem.remove("/CCLite.cfg") end
 if love.filesystem.exists("/CCLite.cfg") then
 	local cfgData = love.filesystem.read("/CCLite.cfg")
 	validateConfig(cfgData)
@@ -93,7 +92,6 @@ else
 	love.filesystem.write("/CCLite.cfg", defaultConf)
 end
 
-love.window.setFullscreen(true, "desktop")
 love.window.setTitle("CC Emulator for Raspberry Pi 3")
 love.window.setIcon(love.image.newImageData("res/icon.png"))
 -- w = (_conf.terminal_width * 6 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2)
@@ -722,11 +720,17 @@ function love.run()
 		if love.keyboard.isDown("ctrl") and love.keyboard.isDown("alt") and love.keyboard.isDown("shift") then -- global keyboard shortcuts to interact with Pi
 	        if love.keyboard.isDown("r") then
 	            -- write to file to alert handler to run "sudo reboot"
+				love.filesystem.write("/action.txt", "reboot")
 	            love.event.push("quit")
 	        elseif love.keyboard.isDown("s") then
 	            -- write to file to alert handler to run "sudo poweroff"
+				love.filesystem.write("/action.txt", "poweroff")
 	            love.event.push("quit")
-	        end
+	        elseif love.keyboard.isDown("c") then
+				-- write to file to alert handler to allow user to access terminal
+				love.filesystem.write("/action.txt", "exit")
+				love.event.push("quit")
+			end
 	    end
 		-- Process events.
 		if love.event then
