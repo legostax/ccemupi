@@ -720,15 +720,15 @@ function love.run()
 		if love.keyboard.isDown("ctrl") and love.keyboard.isDown("alt") and love.keyboard.isDown("shift") then -- global keyboard shortcuts to interact with Pi
 	        if love.keyboard.isDown("r") then
 	            -- write to file to alert handler to run "sudo reboot"
-				love.filesystem.write("/action.txt", "reboot")
+				love.filesystem.write("/action.txt", "{reboot}")
 	            love.event.push("quit")
 	        elseif love.keyboard.isDown("s") then
 	            -- write to file to alert handler to run "sudo poweroff"
-				love.filesystem.write("/action.txt", "poweroff")
+				love.filesystem.write("/action.txt", "{poweroff}")
 	            love.event.push("quit")
 	        elseif love.keyboard.isDown("c") then
 				-- write to file to alert handler to allow user to access terminal
-				love.filesystem.write("/action.txt", "exit")
+				love.filesystem.write("/action.txt", "{exit}")
 				love.event.push("quit")
 			end
 	    end
