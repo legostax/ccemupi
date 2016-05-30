@@ -3,10 +3,28 @@ ComputerCraft Emulator for Raspberry Pi 3
 
 Description:
 ------------
+This is a version of the ComputerCraft Emulator written with LÖVE 0.10.0 that is designed for use with the Raspberry Pi.  The image ships with Raspbian Jessie Lite (built on 5-10-2016), a splash screen, LÖVE 0.10.0,  and the emulator itself.
 
-This is a ComputerCraft Emulator written in Love2D. It is not complete, and is still a work in progress.
+Notes:
+------
+- My fork of CCLite has a different save directory than Sorroko's and gamax92's versions. Mine will save to the "ccemupi" folder while theres' save to the "cclite" and "ccemu" folders respectively.
+- Due to certain glitches with the SDL2 library for the Pi, the mouse cursor has been removed and the emulator only supports a normal black and white CC computer in order to keep to the spirit of ComputerCraft
+- On the first run, the user will be prompted to set a new password for the pi account as well as configure the wi-fi.
 
-**This version only comes packaged with a special Raspbian image file that has yet to be released.**
+Installation:
+-------------
+1. You will need at least an 8GB SD card.  **If someone knows how to create a smaller disk image, please let me know**
+2. **Download the zipped disk image here:**
+Note that the disk image file is **7.4 GB**.
+3. Extract the disk image from the zip file.
+4. If you're running Windows, use Win32 Disk Imager: https://sourceforge.net/projects/win32diskimager/
+5. Insert your 8 GB SD card into your computer and open the disk imager.
+6. Choose the image from file, then select the SD card you wish to write to. Then click Write.
+7. Once the write process is complete, put your SD card into your Raspberry Pi, turn it on, and follow the onscreen instructions.
+
+Build the image yourself
+------------------------
+Detailed instructions will be written in the wiki eventually.
 
 HTTPS Support:
 ----------------
@@ -45,11 +63,6 @@ Then go into conf.lua and set useLuaSec to true
 **Mac:**
 
 I dunno. Try the ssl.so file on the binaries page.
-
-NOTES:
-------
-
-My fork of CCLite has a different save directory than Sorroko's and gamax92's versions. Mine will save to the "ccemupi" folder while theres' save to the "cclite" and "ccemu" folders respectively.
 
 TODO:
 -----
